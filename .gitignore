@@ -1,0 +1,6 @@
+.DS_Store
+data/
+__pycache__/
+logs/events.*
+save/
+testing.ipynb
