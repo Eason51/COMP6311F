@@ -1,0 +1,17 @@
+name: fedavg
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - cudnn
+  - python
+  - numpy
+  - cudatoolkit
+  - pytorch
+  - matplotlib
+  - torchvision
+  - pytorch-gpu
+  - tensorboardx
+  - tqdm
+  - ipykernel
+prefix: /home/eason/anaconda3/envs/fedavg
