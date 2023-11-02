@@ -5,7 +5,7 @@
 import copy
 import torch
 from torchvision import datasets, transforms
-from sampling import mnist_iid, mnist_noniid, mnist_noniid_unequal
+from sampling import mnist_iid, mnist_noniid, mnist_noniid_unequal, mnist_noniid_mix
 from sampling import cifar_iid, cifar_noniid
 from torch import nn
 import torch.nn.functional as F
@@ -66,7 +66,7 @@ def get_dataset(args):
         if args.iid:
             # Sample IID user data from Mnist
             user_groups = mnist_iid(train_dataset, args.num_users)
-        else:
+        elif not args.mix:
             # Sample Non-IID user data from Mnist
             if args.unequal:
                 # Chose uneuqal splits for every user
@@ -74,6 +74,8 @@ def get_dataset(args):
             else:
                 # Chose euqal splits for every user
                 user_groups = mnist_noniid(train_dataset, args.num_users)
+        elif args.mix:
+            user_groups = mnist_noniid_mix(train_dataset, args.num_users)
 
     return train_dataset, test_dataset, user_groups
 
