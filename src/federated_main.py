@@ -45,10 +45,16 @@ if __name__ == '__main__':
     if args.gpu:
         torch.cuda.set_device(int(args.gpu))
     device = 'cuda' if args.gpu else 'cpu'
+    
+    #! print current device
+    print('Current device is ' + device)
 
     # load dataset and user groups
     train_dataset, test_dataset, user_groups = get_dataset(args)
 
+    
+    
+    
     # BUILD MODEL
     if args.model == 'cnn':
         # Convolutional neural netork
@@ -59,6 +65,9 @@ if __name__ == '__main__':
         elif args.dataset == 'cifar':
             global_model = CNNCifar(args=args)
 
+            
+            
+            
     elif args.model == 'mlp':
         # Multi-layer preceptron
         img_size = train_dataset[0][0].shape
