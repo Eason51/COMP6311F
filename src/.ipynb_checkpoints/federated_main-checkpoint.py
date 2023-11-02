@@ -51,6 +51,9 @@ if __name__ == '__main__':
     # load dataset and user groups
     train_dataset, test_dataset, user_groups = get_dataset(args)
 
+    
+    
+    
     # BUILD MODEL
     if args.model == 'cnn':
         # Convolutional neural netork
@@ -61,6 +64,9 @@ if __name__ == '__main__':
         elif args.dataset == 'cifar':
             global_model = CNNCifar(args=args)
 
+            
+            
+            
     elif args.model == 'mlp':
         # Multi-layer preceptron
         img_size = train_dataset[0][0].shape

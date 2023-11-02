@@ -15,6 +15,7 @@ def get_dataset(args):
     each of those users.
     """
 
+    
     if args.dataset == 'cifar':
         data_dir = '../data/cifar/'
         apply_transform = transforms.Compose(
@@ -70,6 +71,10 @@ def get_dataset(args):
                 user_groups = mnist_noniid(train_dataset, args.num_users)
 
     return train_dataset, test_dataset, user_groups
+
+
+
+
 
 
 def average_weights(w):
