@@ -20,10 +20,21 @@ if __name__ == '__main__':
     if args.gpu:
         torch.cuda.set_device(int(args.gpu))
     device = 'cuda' if args.gpu else 'cpu'
+    
+        
+    #! print current device
+    print('Current device is ' + device)
 
+    
+    
+    
     # load datasets
+    #! by args
     train_dataset, test_dataset, _ = get_dataset(args)
-
+    
+    
+    
+    #! define the model
     # BUILD MODEL
     if args.model == 'cnn':
         # Convolutional neural netork
@@ -44,11 +55,17 @@ if __name__ == '__main__':
     else:
         exit('Error: unrecognized model')
 
+        
+        
+        
     # Set the model to train and send it to device.
     global_model.to(device)
     global_model.train()
     print(global_model)
 
+    
+    
+    
     # Training
     # Set optimizer and criterion
     if args.optimizer == 'sgd':
@@ -60,6 +77,9 @@ if __name__ == '__main__':
 
     trainloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
     criterion = torch.nn.NLLLoss().to(device)
+    
+    
+    
     epoch_loss = []
 
     for epoch in tqdm(range(args.epochs)):
@@ -83,6 +103,10 @@ if __name__ == '__main__':
         loss_avg = sum(batch_loss)/len(batch_loss)
         print('\nTrain loss:', loss_avg)
         epoch_loss.append(loss_avg)
+        
+        
+        
+        
 
     # Plot loss
     plt.figure()
@@ -92,6 +116,8 @@ if __name__ == '__main__':
     plt.savefig('../save/nn_{}_{}_{}.png'.format(args.dataset, args.model,
                                                  args.epochs))
 
+    
+    #! test the results based on the test_dataset
     # testing
     test_acc, test_loss = test_inference(args, global_model, test_dataset)
     print('Test on', len(test_dataset), 'samples')
