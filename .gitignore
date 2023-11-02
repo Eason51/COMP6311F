@@ -4,3 +4,7 @@ __pycache__/
 logs/events.*
 save/
 testing.ipynb
+
+*.ipynb_checkpoints
+*.ipynb_checkpoints/
+.ipynb_checkpoints/
