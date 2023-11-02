@@ -2,9 +2,57 @@
 # -*- coding: utf-8 -*-
 # Python version: 3.6
 
+import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.optim import Optimizer
+import copy
+
+
+class WeightAverageParametrization(nn.Module):
+    def __init__(self, w, alpha, name, property):
+        super(WeightAverageParametrization, self).__init__()
+        self.w = w
+        self.alpha = alpha
+        self.name = name
+        self.property = property
+
+    def forward(self, x):
+        w_layer = []
+        for w_model in self.w:
+            layer = w_model[f"{self.name}.{self.property}"]
+            w_layer.append(layer)
+        # w_avg is a tensor
+        w_avg = copy.deepcopy(w_layer[0])
+        # initialize w_avg to 0'
+        w_avg = torch.zeros(w_avg.shape, device=w_avg.device)
+
+        for i in range(len(w_layer)):
+            w_avg += w_layer[i] * self.alpha[i]
+        w_avg = torch.div(w_avg, torch.sum(self.alpha))
+        return w_avg
+
+
+class WeightAverage(nn.Module):
+    def __init__(self, w, alpha, property):
+        super(WeightAverage, self).__init__()
+        self.w = w
+        self.alpha = alpha
+        self.property = property
+
+    def forward(self, x):
+        w_avg = copy.deepcopy(self.w[0])
+        for key in w_avg.keys():
+            w_avg[key] = torch.zeros(w_avg[key].shape, device=w_avg[key].device)
+        for key in w_avg.keys():
+            for i in range(len(self.w)):
+                w_avg[key] += self.w[i][key] * self.alpha[i]
+            w_avg[key] = torch.div(w_avg[key], torch.sum(self.alpha))
+        if(self.property == "weight"):
+            return w_avg["weight"]
+        elif(self.property == "bias"):
+            return w_avg["bias"]
+
 
 class ScaffoldOptimizer(Optimizer):
     def __init__(self, params, lr, weight_decay):

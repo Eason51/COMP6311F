@@ -42,9 +42,9 @@ def mnist_noniid(dataset, num_users):
     idxs_labels = idxs_labels[:, idxs_labels[1, :].argsort()]
     idxs = idxs_labels[0, :]
 
-    # divide and assign 2 shards/client
+    # divide and assign shards/client
     for i in range(num_users):
-        rand_set = set(np.random.choice(idx_shard, 2, replace=False))
+        rand_set = set(np.random.choice(idx_shard, int(200 / num_users), replace=False))
         idx_shard = list(set(idx_shard) - rand_set)
         for rand in rand_set:
             dict_users[i] = np.concatenate(

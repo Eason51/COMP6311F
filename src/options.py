@@ -64,5 +64,7 @@ def args_parser():
     parser.add_argument('--seed', type=int, default=1, help='random seed')
     # add a boolean argument to control whether to enable scaffold algorithm
     parser.add_argument('--scaffold', type=int, default=0, help='whether to enable scaffold algorithm')
+    parser.add_argument("--weighted", type=int, default=0, help="whether to enable weighted averaging")
+    parser.add_argument("--mix", type=int, default=0, help="whether to enable mix")
     args = parser.parse_args()
     return args
