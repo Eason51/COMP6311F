@@ -33,7 +33,7 @@ def mnist_noniid_mix(dataset, num_users):
     # 60,000 training imgs -->  300 imgs/shard X 100 shards
     # split the first half of the dataset into 100 shards of 300 imgs each
     # use the first half as non-idd and the second half as iid
-    num_shards, num_imgs = 100, 300
+    num_shards, num_imgs = 160, 300
     idx_shard = [i for i in range(num_shards)]
     dict_users = {i: np.array([]) for i in range(num_users)}
     idxs_noiid = np.arange(num_shards*num_imgs)
@@ -46,20 +46,38 @@ def mnist_noniid_mix(dataset, num_users):
 
     idxs_iid = np.arange(num_shards*num_imgs, len(dataset))
 
+    # assume num_users == 5 for now
+
     # divide and assign shards/client
     for i in range(num_users):
-        rand_set = set(np.random.choice(idx_shard, int(100 / num_users), replace=False))
-        idx_shard = list(set(idx_shard) - rand_set)
-        for rand in rand_set:
+        if(i == -1):
+            rand_set = set(np.random.choice(idx_shard, int(num_shards / num_users), replace=False))
+            idx_shard = list(set(idx_shard) - rand_set)
+            for rand in rand_set:
+                dict_users[i] = np.concatenate(
+                    (dict_users[i], idxs_noiid[rand*num_imgs:(rand+1)*num_imgs]), axis=0)
+                
+            print(f"len(dict_users[{i}] 1: ", len(dict_users[i]))
+            iid_set = set(np.random.choice(idxs_iid, int(len(dataset) / num_users / 2), replace=False))
+            idxs_iid = list(set(idxs_iid) - iid_set)
             dict_users[i] = np.concatenate(
-                (dict_users[i], idxs_noiid[rand*num_imgs:(rand+1)*num_imgs]), axis=0)
-            
-        print("len(dict_users[i] 1: ", len(dict_users[i]))
-        iid_set = set(np.random.choice(idxs_iid, int(len(dataset) / num_users / 2), replace=False))
-        idxs_iid = list(set(idxs_iid) - iid_set)
-        dict_users[i] = np.concatenate(
-                (dict_users[i], np.array(list(iid_set))), axis=0)
-        print("len(dict_users[i]) 2: ", len(dict_users[i]))
+                    (dict_users[i], np.array(list(iid_set))), axis=0)
+            print(f"len(dict_users[{i}]) 2: ", len(dict_users[i]))
+        elif(i == 4 or i == 1 or i == 2 or i == 3):
+            # rand_set = set(np.random.choice(idx_shard, int(num_shards / num_users * 2), replace=False))
+            rand_set = set(np.random.choice(idx_shard, int(40), replace=False))
+            idx_shard = list(set(idx_shard) - rand_set)
+            for rand in rand_set:
+                dict_users[i] = np.concatenate(
+                    (dict_users[i], idxs_noiid[rand*num_imgs:(rand+1)*num_imgs]), axis=0)
+            print(f"len(dict_users[{i}]) 2: ", len(dict_users[i]))
+        elif(i == 0):
+            iid_set = set(np.random.choice(idxs_iid, int(len(dataset) / num_users), replace=False))
+            idxs_iid = list(set(idxs_iid) - iid_set)
+            dict_users[i] = np.concatenate(
+                    (dict_users[i], np.array(list(iid_set))), axis=0)
+            print(f"len(dict_users[{i}]) 2: ", len(dict_users[i]))
+                
 
     return dict_users
 

@@ -29,9 +29,9 @@ import numpy as np
 
 if __name__ == '__main__':
 
-    torch.manual_seed(0)
-    random.seed(0)
-    np.random.seed(0)
+    torch.manual_seed(3407)
+    random.seed(3407)
+    np.random.seed(3407)
 
     start_time = time.time()
 
@@ -163,7 +163,7 @@ if __name__ == '__main__':
 
         # train combined weights by averaging local weights through the weighted average
         else:
-            combine_weights_batch_size = 1000
+            combine_weights_batch_size = 200
             # make a dataloader for the combine_weights_train_dataset
             combine_weights_train_dataloader = DataLoader(combine_weights_train_dataset, batch_size=combine_weights_batch_size, shuffle=True)
             for batch_idx, (images, labels) in enumerate(combine_weights_train_dataloader):
@@ -178,7 +178,7 @@ if __name__ == '__main__':
                 combine_weights_optimizer.step()
 
                 # ensure alpha is always positive
-                combine_weights.alpha.data = torch.abs(combine_weights.alpha.data)
+                # combine_weights.alpha.data = torch.abs(combine_weights.alpha.data)
                 # normalize alpha so that it is always a probability distribution
                 combine_weights.alpha.data = torch.div(combine_weights.alpha.data, torch.sum(combine_weights.alpha.data))
 
