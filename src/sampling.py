@@ -43,6 +43,7 @@ def mnist_noniid_mix(dataset, num_users):
     idxs_labels = np.vstack((idxs_noiid, labels_noiid))
     idxs_labels = idxs_labels[:, idxs_labels[1, :].argsort()]
     idxs_noiid = idxs_labels[0, :]
+    idxs_noiid_labels = idxs_labels[1, :]
 
     idxs_iid = np.arange(num_shards*num_imgs, len(dataset))
 
@@ -59,18 +60,27 @@ def mnist_noniid_mix(dataset, num_users):
                 
             print(f"len(dict_users[{i}] 1: ", len(dict_users[i]))
             iid_set = set(np.random.choice(idxs_iid, int(len(dataset) / num_users / 2), replace=False))
-            idxs_iid = list(set(idxs_iid) - iid_set)
+            idxs_iid = list(set(idxs_iid) - iid_set) 
             dict_users[i] = np.concatenate(
                     (dict_users[i], np.array(list(iid_set))), axis=0)
             print(f"len(dict_users[{i}]) 2: ", len(dict_users[i]))
-        elif(i == 4 or i == 1 or i == 2 or i == 3):
+        elif(i == 1 or i == 2 or i == 3 or i == 4):
             # rand_set = set(np.random.choice(idx_shard, int(num_shards / num_users * 2), replace=False))
-            rand_set = set(np.random.choice(idx_shard, int(40), replace=False))
+            # rand_set = set(np.random.choice(idx_shard, int(40), replace=False))
+            # sequentially assign 40 first shards from id_shard_index to each client and increment id_shard_index by 40
+            print("i: ", i)
+            labels = []
+            idx_shard_index = 0
+            rand_set = set(idx_shard[idx_shard_index:idx_shard_index+40])
+            idx_shard_index += 40
             idx_shard = list(set(idx_shard) - rand_set)
             for rand in rand_set:
                 dict_users[i] = np.concatenate(
                     (dict_users[i], idxs_noiid[rand*num_imgs:(rand+1)*num_imgs]), axis=0)
-            print(f"len(dict_users[{i}]) 2: ", len(dict_users[i]))
+                labels.append(idxs_noiid_labels[rand*num_imgs:(rand+1)*num_imgs])
+            # print all labels occured in this client
+            print("labels: ", np.unique(np.array(labels)))
+
         elif(i == 0):
             iid_set = set(np.random.choice(idxs_iid, int(len(dataset) / num_users), replace=False))
             idxs_iid = list(set(idxs_iid) - iid_set)

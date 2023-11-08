@@ -80,7 +80,7 @@ if __name__ == '__main__':
         exit('Error: unrecognized model')
 
     # use 10% of test_dataset as combine_weights training set, and the rest are used for testing
-    test_dataset, combine_weights_train_dataset = random_split(test_dataset, [int(len(test_dataset) * 0.9), int(len(test_dataset) * 0.1)])
+    test_dataset, combine_weights_train_dataset = random_split(test_dataset, [int(len(test_dataset) * 0.5), int(len(test_dataset) * 0.5)])
 
     if(args.weighted):
         # combine_weights = torch.nn.Parameter(torch.tensor([0.2, 0.2, 0.2, 0.2, 0.2]), requires_grad=True)
@@ -88,8 +88,8 @@ if __name__ == '__main__':
         combine_weights.alpha = torch.nn.Parameter(torch.ones(int(args.num_users * args.frac)) / int(args.num_users * args.frac))
         combine_weights.to(device)
 
-        combine_weights_optimizer = torch.optim.SGD([combine_weights.alpha], lr=0.01)
-        # combine_weights_optimizer = torch.optim.Adam([combine_weights.alpha], lr=0.01)
+        # combine_weights_optimizer = torch.optim.SGD([combine_weights.alpha], lr=0.01)
+        combine_weights_optimizer = torch.optim.Adam([combine_weights.alpha], lr=0.01)
         combine_weights_criterion = torch.nn.NLLLoss()
         combine_weights_record = []
         combine_weights_record.append(copy.deepcopy(combine_weights.alpha))
@@ -163,7 +163,7 @@ if __name__ == '__main__':
 
         # train combined weights by averaging local weights through the weighted average
         else:
-            combine_weights_batch_size = 200
+            combine_weights_batch_size = 500
             # make a dataloader for the combine_weights_train_dataset
             combine_weights_train_dataloader = DataLoader(combine_weights_train_dataset, batch_size=combine_weights_batch_size, shuffle=True)
             for batch_idx, (images, labels) in enumerate(combine_weights_train_dataloader):
