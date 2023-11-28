@@ -62,7 +62,9 @@ def get_dataset(args):
         test_dataset = datasets.MNIST(data_dir, train=False, download=True,
                                       transform=apply_transform)
 
-        
+        # downlaod sampling for the dataset
+
+
         
         # sample training data amongst users
         if args.iid:
