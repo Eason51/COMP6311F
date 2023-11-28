@@ -8,3 +8,4 @@ testing.ipynb
 *.ipynb_checkpoints
 *.ipynb_checkpoints/
 .ipynb_checkpoints/
+save_temp/

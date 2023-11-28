@@ -24,14 +24,19 @@ import torch
 from torch.utils.data import random_split, DataLoader
 import numpy as np
 
+# PLOTTING (optional)
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use('Agg')
 
 
 
 if __name__ == '__main__':
 
-    torch.manual_seed(3407)
-    random.seed(3407)
-    np.random.seed(3407)
+    # fix all random seeds for reproducibility
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
 
     start_time = time.time()
 
@@ -50,7 +55,7 @@ if __name__ == '__main__':
     print('Current device is ' + device)
 
     # load dataset and user groups
-    train_dataset, test_dataset, user_groups = get_dataset(args)
+    train_dataset, test_dataset, user_groups, combine_weights_train_id = get_dataset(args)
 
     
     
@@ -80,7 +85,15 @@ if __name__ == '__main__':
         exit('Error: unrecognized model')
 
     # use 10% of test_dataset as combine_weights training set, and the rest are used for testing
-    test_dataset, combine_weights_train_dataset = random_split(test_dataset, [int(len(test_dataset) * 0.5), int(len(test_dataset) * 0.5)])
+    # test_dataset, combine_weights_train_dataset = random_split(test_dataset, [int(len(test_dataset) * 0.9), int(len(test_dataset) * 0.1)])
+    # train_dataset,  combine_weights_train_dataset = random_split(train_dataset, [59000, 1000])
+
+    # combine_weights_train_id stores the id of the images in the combine_weights_train_dataset
+    # construct the combine_weights_train_dataset using the combine_weights_train_id
+    combine_weights_train_dataset = []
+    for i in range(len(combine_weights_train_id)):
+        combine_weights_train_dataset.append(train_dataset[combine_weights_train_id[i]])
+
 
     if(args.weighted):
         # combine_weights = torch.nn.Parameter(torch.tensor([0.2, 0.2, 0.2, 0.2, 0.2]), requires_grad=True)
@@ -88,8 +101,8 @@ if __name__ == '__main__':
         combine_weights.alpha = torch.nn.Parameter(torch.ones(int(args.num_users * args.frac)) / int(args.num_users * args.frac))
         combine_weights.to(device)
 
-        # combine_weights_optimizer = torch.optim.SGD([combine_weights.alpha], lr=0.01)
-        combine_weights_optimizer = torch.optim.Adam([combine_weights.alpha], lr=0.01)
+        combine_weights_optimizer = torch.optim.SGD([combine_weights.alpha], lr=0.001)
+        # combine_weights_optimizer = torch.optim.Adam([combine_weights.alpha], lr=0.01)
         combine_weights_criterion = torch.nn.NLLLoss()
         combine_weights_record = []
         combine_weights_record.append(copy.deepcopy(combine_weights.alpha))
@@ -163,28 +176,33 @@ if __name__ == '__main__':
 
         # train combined weights by averaging local weights through the weighted average
         else:
-            combine_weights_batch_size = 500
-            # make a dataloader for the combine_weights_train_dataset
-            combine_weights_train_dataloader = DataLoader(combine_weights_train_dataset, batch_size=combine_weights_batch_size, shuffle=True)
-            for batch_idx, (images, labels) in enumerate(combine_weights_train_dataloader):
-                images, labels = images.to(device), labels.to(device)
-                combine_weights_optimizer.zero_grad()
+            # reinitailize alpha values to be uniform
+            combine_weights.alpha.data = torch.ones(int(args.num_users * args.frac)) / int(args.num_users * args.frac)
+            for combine_epoch in range(30):
+                combine_weights_batch_size = 250
+                # make a dataloader for the combine_weights_train_dataset
+                combine_weights_train_dataloader = DataLoader(combine_weights_train_dataset, batch_size=combine_weights_batch_size, shuffle=True)
+                for batch_idx, (images, labels) in enumerate(combine_weights_train_dataloader):
+                    images, labels = images.to(device), labels.to(device)
+                    combine_weights_optimizer.zero_grad()
 
-                model_register_parametrization(combine_weights, local_weights, combine_weights.alpha)
+                    model_register_parametrization(combine_weights, local_weights, combine_weights.alpha)
 
-                output = combine_weights(images)
-                loss = combine_weights_criterion(output, labels)
-                loss.backward()
-                combine_weights_optimizer.step()
+                    output = combine_weights(images)
+                    loss = combine_weights_criterion(output, labels)
+                    loss.backward()
+                    combine_weights_optimizer.step()
 
-                # ensure alpha is always positive
-                # combine_weights.alpha.data = torch.abs(combine_weights.alpha.data)
-                # normalize alpha so that it is always a probability distribution
-                combine_weights.alpha.data = torch.div(combine_weights.alpha.data, torch.sum(combine_weights.alpha.data))
+                    # ensure alpha is always positive
+                    combine_weights.alpha.data = torch.abs(combine_weights.alpha.data)
+                    # normalize alpha so that it is always a probability distribution
+                    combine_weights.alpha.data = torch.div(combine_weights.alpha.data, torch.sum(combine_weights.alpha.data))
 
-            combine_weights_record.append(copy.deepcopy(combine_weights.alpha))
+                combine_weights_record.append(copy.deepcopy(combine_weights.alpha))          
 
 
+        if(args.weighted):
+            print("current alpha: ", combine_weights.alpha.data)
 
         # update global weights 
         if(not args.weighted):
@@ -223,24 +241,41 @@ if __name__ == '__main__':
         test_accuracy_list.append(test_acc)
         test_loss_list.append(test_loss)
 
+        # Plot test Accuracy vs Communication rounds
+        plt.figure()
+        plt.title('Test Accuracy vs Communication rounds')
+        plt.plot(range(len(test_accuracy_list)), test_accuracy_list, color='k')
+        plt.ylabel('Test Accuracy')
+        plt.xlabel('Communication Rounds')
+        # set x axis to be integer only
+        plt.xticks(range(len(test_accuracy_list)))
+        plt.savefig('../save/fed_Scaf{}_Wt{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.png'.
+                    format(args.scaffold, args.weighted, args.dataset, args.model, args.epochs, args.frac,
+                        args.iid, args.local_ep, args.local_bs))
+        
+        # save the test_accuracy_list to a file
+        file_name = '../save/objects/fed_Scaf{}_Wt{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.pkl'.\
+            format(args.scaffold, args.weighted, args.dataset, args.model, args.epochs, args.frac, 
+                    args.iid, args.local_ep, args.local_bs)
+        
+        with open(file_name, 'wb') as f:
+            pickle.dump([test_accuracy_list], f)
 
-    # Saving the objects train_loss and train_accuracy:
-    file_name = '../save/objects/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'.\
-        format(args.dataset, args.model, args.epochs, args.frac, args.iid,
-               args.local_ep, args.local_bs)
 
-    with open(file_name, 'wb') as f:
-        pickle.dump([train_loss, train_accuracy], f)
+    # # Saving the objects train_loss and train_accuracy:
+    # file_name = '../save/objects/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'.\
+    #     format(args.dataset, args.model, args.epochs, args.frac, args.iid,
+    #            args.local_ep, args.local_bs)
+
+    # with open(file_name, 'wb') as f:
+    #     pickle.dump([train_loss, train_accuracy], f)
 
     print('\n Total Run Time: {0:0.4f}'.format(time.time()-start_time))
 
     if(args.weighted):
         print("combine_weights_record: ", combine_weights_record)
 
-    # PLOTTING (optional)
-    import matplotlib
-    import matplotlib.pyplot as plt
-    matplotlib.use('Agg')
+
 
     # # Plot Loss curve
     # plt.figure()
@@ -268,9 +303,19 @@ if __name__ == '__main__':
     plt.plot(range(len(test_accuracy_list)), test_accuracy_list, color='k')
     plt.ylabel('Test Accuracy')
     plt.xlabel('Communication Rounds')
+    # set x axis to be integer only
+    plt.xticks(range(len(test_accuracy_list)))
     plt.savefig('../save/fed_Scaf{}_Wt{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.png'.
                 format(args.scaffold, args.weighted, args.dataset, args.model, args.epochs, args.frac,
                        args.iid, args.local_ep, args.local_bs))
+    
+    # save the test_accuracy_list to a file
+    file_name = '../save/objects/fed_Scaf{}_Wt{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.pkl'.\
+        format(args.scaffold, args.weighted, args.dataset, args.model, args.epochs, args.frac, 
+                args.iid, args.local_ep, args.local_bs)
+    
+    with open(file_name, 'wb') as f:
+        pickle.dump([test_accuracy_list], f)
     
     # # Plot test Loss vs Communication rounds
     # plt.figure()
@@ -281,3 +326,8 @@ if __name__ == '__main__':
     # plt.savefig('../save/fed_Scaf{}_Wt{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_loss.png'.
     #             format(args.scaffold, args.weighted, args.dataset, args.model, args.epochs, args.frac,
     #                    args.iid, args.local_ep, args.local_bs))
+
+
+
+    
+

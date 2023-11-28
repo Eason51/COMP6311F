@@ -33,7 +33,8 @@ def mnist_noniid_mix(dataset, num_users):
     # 60,000 training imgs -->  300 imgs/shard X 100 shards
     # split the first half of the dataset into 100 shards of 300 imgs each
     # use the first half as non-idd and the second half as iid
-    num_shards, num_imgs = 160, 300
+    combine_weights_train_dataset_count = 1000
+    num_shards, num_imgs = 160, 295
     idx_shard = [i for i in range(num_shards)]
     dict_users = {i: np.array([]) for i in range(num_users)}
     idxs_noiid = np.arange(num_shards*num_imgs)
@@ -64,15 +65,15 @@ def mnist_noniid_mix(dataset, num_users):
             dict_users[i] = np.concatenate(
                     (dict_users[i], np.array(list(iid_set))), axis=0)
             print(f"len(dict_users[{i}]) 2: ", len(dict_users[i]))
-        elif(i == 1 or i == 2 or i == 3 or i == 4):
+        elif(i in range(0, 8)):
             # rand_set = set(np.random.choice(idx_shard, int(num_shards / num_users * 2), replace=False))
-            # rand_set = set(np.random.choice(idx_shard, int(40), replace=False))
+            rand_set = set(np.random.choice(idx_shard, int(20), replace=False))
             # sequentially assign 40 first shards from id_shard_index to each client and increment id_shard_index by 40
             print("i: ", i)
             labels = []
-            idx_shard_index = 0
-            rand_set = set(idx_shard[idx_shard_index:idx_shard_index+40])
-            idx_shard_index += 40
+            # idx_shard_index = 0
+            # rand_set = set(idx_shard[idx_shard_index:idx_shard_index+20])
+            # idx_shard_index += 20
             idx_shard = list(set(idx_shard) - rand_set)
             for rand in rand_set:
                 dict_users[i] = np.concatenate(
@@ -80,16 +81,19 @@ def mnist_noniid_mix(dataset, num_users):
                 labels.append(idxs_noiid_labels[rand*num_imgs:(rand+1)*num_imgs])
             # print all labels occured in this client
             print("labels: ", np.unique(np.array(labels)))
+            print(f"len(dict_users[{i}]) 2: ", len(dict_users[i]))
 
-        elif(i == 0):
-            iid_set = set(np.random.choice(idxs_iid, int(len(dataset) / num_users), replace=False))
+        elif(i in range(8, 10)):
+            iid_set = set(np.random.choice(idxs_iid, int((len(dataset) - combine_weights_train_dataset_count) / num_users), replace=False))
             idxs_iid = list(set(idxs_iid) - iid_set)
             dict_users[i] = np.concatenate(
                     (dict_users[i], np.array(list(iid_set))), axis=0)
             print(f"len(dict_users[{i}]) 2: ", len(dict_users[i]))
+
+        print("remaining number o idx_iid: ", len(idxs_iid))
                 
 
-    return dict_users
+    return dict_users, idxs_iid
 
 
 
