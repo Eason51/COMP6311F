@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.optim import Optimizer
 import torch.nn.utils.parametrize as parametrize
 from models import WeightAverageParametrization
+from torch.utils.data import random_split
 
 
 def get_dataset(args):
@@ -20,6 +21,7 @@ def get_dataset(args):
     each of those users.
     """
 
+    combine_weights_train_id = []
     
     if args.dataset == 'cifar':
         data_dir = '../data/cifar/'
@@ -29,6 +31,9 @@ def get_dataset(args):
 
         train_dataset = datasets.CIFAR10(data_dir, train=True, download=True,
                                        transform=apply_transform)
+        
+        # shuffle the train dataset
+        train_dataset = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True)
 
         test_dataset = datasets.CIFAR10(data_dir, train=False, download=True,
                                       transform=apply_transform)
@@ -75,9 +80,9 @@ def get_dataset(args):
                 # Chose euqal splits for every user
                 user_groups = mnist_noniid(train_dataset, args.num_users)
         elif args.mix:
-            user_groups = mnist_noniid_mix(train_dataset, args.num_users)
+            user_groups, combine_weights_train_id = mnist_noniid_mix(train_dataset, args.num_users)
 
-    return train_dataset, test_dataset, user_groups
+    return train_dataset, test_dataset, user_groups, combine_weights_train_id
 
 
 
