@@ -22,6 +22,8 @@ import torch.nn.utils.parametrize as parametrize
 import random
 import torch
 from torch.utils.data import random_split, DataLoader
+import torchvision.transforms.functional as TF
+from PIL import Image
 import numpy as np
 
 # PLOTTING (optional)
@@ -30,6 +32,20 @@ import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 
 
+def rotate_90(image):
+    return TF.rotate(image, 90)
+
+def gaussian_noise(x, mean=0, std=20):
+    # Convert PIL image to numpy array
+    x = np.array(x)
+    # Add gaussian noise
+    x = x + np.random.normal(mean, std, x.shape)
+    # Clip the values to be between 0 and 255
+    x = np.clip(x, 0, 255)
+    # Convert numpy array back to PIL image
+    x = Image.fromarray(x.astype(np.uint8))
+    return x
+
 
 if __name__ == '__main__':
 
@@ -37,6 +53,9 @@ if __name__ == '__main__':
     torch.manual_seed(0)
     random.seed(0)
     np.random.seed(0)
+
+    # set number of threads to 1
+    torch.set_num_threads(1)
 
     start_time = time.time()
 
@@ -57,17 +76,17 @@ if __name__ == '__main__':
     # load dataset and user groups
     train_dataset, test_dataset, user_groups, combine_weights_train_id = get_dataset(args)
 
-    
+    print("len(combine_weights_train_id): ", len(combine_weights_train_id))
     
     
     # BUILD MODEL
     if args.model == 'cnn':
         # Convolutional neural netork
-        if args.dataset == 'mnist':
+        if args.dataset == 'mnist' or args.dataset == 'mnist_transformed':
             global_model = CNNMnist(args=args)
         elif args.dataset == 'fmnist':
             global_model = CNNFashion_Mnist(args=args)
-        elif args.dataset == 'cifar':
+        elif args.dataset == 'cifar' or args.dataset == 'cifar_transformed':
             global_model = CNNCifar(args=args)
 
             
@@ -249,13 +268,14 @@ if __name__ == '__main__':
         plt.xlabel('Communication Rounds')
         # set x axis to be integer only
         plt.xticks(range(len(test_accuracy_list)))
-        plt.savefig('../save/fed_Scaf{}_Wt{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.png'.
-                    format(args.scaffold, args.weighted, args.dataset, args.model, args.epochs, args.frac,
+        plt.savefig('../save/fed_Scaf{}_Wt{}_Mx{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.png'.
+                    format(args.scaffold, args.weighted, args.mix, args.dataset, args.model, args.epochs, args.frac,
                         args.iid, args.local_ep, args.local_bs))
+        plt.close()
         
         # save the test_accuracy_list to a file
-        file_name = '../save/objects/fed_Scaf{}_Wt{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.pkl'.\
-            format(args.scaffold, args.weighted, args.dataset, args.model, args.epochs, args.frac, 
+        file_name = '../save/objects/fed_Scaf{}_Wt{}_Mx{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.pkl'.\
+            format(args.scaffold, args.weighted, args.mix, args.dataset, args.model, args.epochs, args.frac, 
                     args.iid, args.local_ep, args.local_bs)
         
         with open(file_name, 'wb') as f:
@@ -305,13 +325,14 @@ if __name__ == '__main__':
     plt.xlabel('Communication Rounds')
     # set x axis to be integer only
     plt.xticks(range(len(test_accuracy_list)))
-    plt.savefig('../save/fed_Scaf{}_Wt{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.png'.
-                format(args.scaffold, args.weighted, args.dataset, args.model, args.epochs, args.frac,
+    plt.savefig('../save/fed_Scaf{}_Wt{}_Mx{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.png'.
+                format(args.scaffold, args.weighted, args.mix, args.dataset, args.model, args.epochs, args.frac,
                        args.iid, args.local_ep, args.local_bs))
+    plt.close()
     
     # save the test_accuracy_list to a file
-    file_name = '../save/objects/fed_Scaf{}_Wt{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.pkl'.\
-        format(args.scaffold, args.weighted, args.dataset, args.model, args.epochs, args.frac, 
+    file_name = '../save/objects/fed_Scaf{}_Wt{}_Mx{}_{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_test_acc.pkl'.\
+        format(args.scaffold, args.weighted, args.mix, args.dataset, args.model, args.epochs, args.frac, 
                 args.iid, args.local_ep, args.local_bs)
     
     with open(file_name, 'wb') as f:

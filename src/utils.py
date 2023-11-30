@@ -5,14 +5,39 @@
 import copy
 import torch
 from torchvision import datasets, transforms
-from sampling import mnist_iid, mnist_noniid, mnist_noniid_unequal, mnist_noniid_mix
-from sampling import cifar_iid, cifar_noniid
+from sampling import mnist_iid, mnist_noniid, mnist_noniid_unequal, mnist_noniid_mix, mnist_noniid_transformed
+from sampling import cifar_iid, cifar_noniid, cifar_noniid_transformed, cifar_noniid_mix, cifar_noniid_mix_original
 from torch import nn
 import torch.nn.functional as F
 from torch.optim import Optimizer
 import torch.nn.utils.parametrize as parametrize
 from models import WeightAverageParametrization
+import torchvision.transforms.functional as TF
+from torch.utils.data import Dataset
 from torch.utils.data import random_split
+import numpy as np
+
+
+
+
+class TransformDataset(Dataset):
+    def __init__(self, dataset, transform=None):
+        self.dataset = dataset
+        self.transform = transform
+        # implement the train_labels to contain all labels of the dataset
+        self.train_labels = []
+        for i in range(len(dataset)):
+            self.train_labels.append(dataset[i][1])
+        self.train_labels = torch.tensor(self.train_labels)
+
+    def __getitem__(self, index):
+        x, y = self.dataset[index]
+        if self.transform:
+            x = self.transform(x)
+        return x, y
+
+    def __len__(self):
+        return len(self.dataset)
 
 
 def get_dataset(args):
@@ -23,64 +48,97 @@ def get_dataset(args):
 
     combine_weights_train_id = []
     
-    if args.dataset == 'cifar':
-        data_dir = '../data/cifar/'
+    if args.dataset == 'cifar' or args.dataset == 'cifar_transformed':
+        if args.dataset == 'cifar':
+            data_dir = '../data/cifar/'
+        elif args.dataset == 'cifar_transformed':
+            data_dir = '../data/cifar_transformed/'
         apply_transform = transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-        train_dataset = datasets.CIFAR10(data_dir, train=True, download=True,
-                                       transform=apply_transform)
-        
-        # shuffle the train dataset
-        train_dataset = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True)
+        if (args.dataset == 'cifar_transformed'):
+            train_dataset = torch.load(data_dir + 'cifar_train_combined.pt')
+            test_dataset = torch.load(data_dir + 'cifar_test_combined.pt')
 
-        test_dataset = datasets.CIFAR10(data_dir, train=False, download=True,
-                                      transform=apply_transform)
+            train_dataset = TransformDataset(train_dataset, transform=apply_transform)
+            test_dataset = TransformDataset(test_dataset, transform=apply_transform)
+        else:
+            train_dataset = datasets.CIFAR10(data_dir, train=True, download=True,
+                                        transform=apply_transform)
+            
+
+            test_dataset = datasets.CIFAR10(data_dir, train=False, download=True,
+                                        transform=apply_transform)
 
         # sample training data amongst users
         if args.iid:
             # Sample IID user data from Mnist
             user_groups = cifar_iid(train_dataset, args.num_users)
-        else:
+        elif not args.mix:
             # Sample Non-IID user data from Mnist
             if args.unequal:
                 # Chose uneuqal splits for every user
                 raise NotImplementedError()
             else:
                 # Chose euqal splits for every user
-                user_groups = cifar_noniid(train_dataset, args.num_users)
+                user_groups, combine_weights_train_id = cifar_noniid(train_dataset, args.num_users)
+        elif (args.mix == 1):
+            print("mix case 1")
+            if(args.dataset == 'cifar'):
+                user_groups, combine_weights_train_id = cifar_noniid_mix_original(train_dataset, args.num_users)
+            elif(args.dataset == 'cifar_transformed'):
+                user_groups, combine_weights_train_id = cifar_noniid_mix(train_dataset, args.num_users)
+        elif (args.mix == 2):
+            print("mix case 2")
+            user_groups, combine_weights_train_id = cifar_noniid_transformed(train_dataset, args.num_users)
 
-    elif args.dataset == 'mnist' or 'fmnist':
+    elif args.dataset == 'mnist' or 'fmnist' or 'mnist_transformed':
         if args.dataset == 'mnist':
             data_dir = '../data/mnist/'
+        elif args.dataset == 'mnist_transformed':
+            data_dir = '../data/mnist_transformed/'
         else:
             data_dir = '../data/fmnist/'
 
         apply_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))])
+        
+        if(args.dataset == 'mnist_transformed'):
+            train_dataset = torch.load(data_dir + 'mnist_train_combined.pt')
+            test_dataset = torch.load(data_dir + 'mnist_test_combined.pt')
 
-        train_dataset = datasets.MNIST(data_dir, train=True, download=True,
-                                       transform=apply_transform)
+            train_dataset = TransformDataset(train_dataset, transform=apply_transform)
+            test_dataset = TransformDataset(test_dataset, transform=apply_transform)
 
-        test_dataset = datasets.MNIST(data_dir, train=False, download=True,
-                                      transform=apply_transform)
+        else:
+
+            train_dataset = datasets.MNIST(data_dir, train=True, download=True,
+                                        transform=apply_transform)
+
+            test_dataset = datasets.MNIST(data_dir, train=False, download=True,
+                                        transform=apply_transform)
 
         # sample training data amongst users
         if args.iid:
             # Sample IID user data from Mnist
             user_groups = mnist_iid(train_dataset, args.num_users)
         elif not args.mix:
+            print("not mixed")
             # Sample Non-IID user data from Mnist
             if args.unequal:
                 # Chose uneuqal splits for every user
                 user_groups = mnist_noniid_unequal(train_dataset, args.num_users)
             else:
                 # Chose euqal splits for every user
-                user_groups = mnist_noniid(train_dataset, args.num_users)
-        elif args.mix:
+                user_groups, combine_weights_train_id = mnist_noniid(train_dataset, args.num_users)
+        elif (args.mix == 1):
+            print("mix case 1")
             user_groups, combine_weights_train_id = mnist_noniid_mix(train_dataset, args.num_users)
+        elif (args.mix == 2):
+            print("mix case 2")
+            user_groups, combine_weights_train_id = mnist_noniid_transformed(train_dataset, args.num_users)
 
     return train_dataset, test_dataset, user_groups, combine_weights_train_id
 

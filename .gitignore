@@ -2,10 +2,12 @@
 data/
 __pycache__/
 logs/events.*
-save/
+
 testing.ipynb
 
 *.ipynb_checkpoints
 *.ipynb_checkpoints/
 .ipynb_checkpoints/
 save_temp/
+save_copy/
+src/commands.txt

@@ -30,7 +30,7 @@ if __name__ == '__main__':
     
     # load datasets
     #! by args
-    train_dataset, test_dataset, _ = get_dataset(args)
+    train_dataset, test_dataset, _, _ = get_dataset(args)
     
     
     
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     # Set optimizer and criterion
     if args.optimizer == 'sgd':
         optimizer = torch.optim.SGD(global_model.parameters(), lr=args.lr,
-                                    momentum=0.5)
+                                    momentum=0.9)
     elif args.optimizer == 'adam':
         optimizer = torch.optim.Adam(global_model.parameters(), lr=args.lr,
                                      weight_decay=1e-4)
@@ -103,7 +103,12 @@ if __name__ == '__main__':
         loss_avg = sum(batch_loss)/len(batch_loss)
         print('\nTrain loss:', loss_avg)
         epoch_loss.append(loss_avg)
-        
+
+        # testing
+        test_acc, test_loss = test_inference(args, global_model, test_dataset)
+        print('Test on', len(test_dataset), 'samples')
+        print("Test Accuracy: {:.2f}%".format(100*test_acc))
+                
         
         
         
