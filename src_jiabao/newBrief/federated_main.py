@@ -203,6 +203,8 @@ if __name__ == '__main__':
         loss_avg = sum(local_losses) / len(local_losses)
         train_loss.append(loss_avg)
 
+
+
         # Calculate avg training accuracy over all users at every epoch
         list_acc, list_loss = [], []
         global_model.eval()
