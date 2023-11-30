@@ -107,6 +107,9 @@ class LocalUpdate(object):
             delta_weight[key] = model.state_dict()[key] - original_global_model.state_dict()[key]
             delta_control[key] = local_control[key] - original_local_control[key]
 
+
+        #! for the local model, the parameters are updated by the global model
+        #! the parameters will be returned, and the average loss
         return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
 
     def inference(self, model):

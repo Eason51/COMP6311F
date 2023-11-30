@@ -51,6 +51,8 @@ if __name__ == '__main__':
 
     # load dataset and user groups
     #! load the dataset
+
+    #! get the train dataset, test dataset, and user groups
     train_dataset, test_dataset, user_groups = get_dataset(args)
 
     
@@ -61,19 +63,19 @@ if __name__ == '__main__':
         # Convolutional neural netork
         if args.dataset == 'mnist':
             global_model = CNNMnist(args=args)
-        elif args.dataset == 'fmnist':
-            global_model = CNNFashion_Mnist(args=args)
+        # elif args.dataset == 'fmnist':
+        #     global_model = CNNFashion_Mnist(args=args)
         elif args.dataset == 'cifar':
             global_model = CNNCifar(args=args)
 
-    elif args.model == 'mlp':
-        # Multi-layer preceptron
-        img_size = train_dataset[0][0].shape
-        len_in = 1
-        for x in img_size:
-            len_in *= x
-            global_model = MLP(dim_in=len_in, dim_hidden=64,
-                               dim_out=args.num_classes)
+    # elif args.model == 'mlp':
+    #     # Multi-layer preceptron
+    #     img_size = train_dataset[0][0].shape
+    #     len_in = 1
+    #     for x in img_size:
+    #         len_in *= x
+    #         global_model = MLP(dim_in=len_in, dim_hidden=64,
+    #                            dim_out=args.num_classes)
     else:
         exit('Error: unrecognized model')
 
@@ -139,10 +141,14 @@ if __name__ == '__main__':
         for idx in idxs_users:
             local_model = LocalUpdate(args=args, dataset=train_dataset,
                                       idxs=user_groups[idx], logger=logger)
+            
+            #! the weights and loss returned by local_model.update_weights() are the weights and loss of the local model after training
             w, loss = local_model.update_weights(
                 model=copy.deepcopy(global_model), global_round=epoch, 
                 global_control=global_control, local_control=local_controls[idx],
                 delta_weight=delta_weights[idx], delta_control=delta_controls[idx])
+            
+
             local_weights.append(copy.deepcopy(w))
             local_losses.append(copy.deepcopy(loss))
 
